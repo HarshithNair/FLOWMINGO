@@ -22,15 +22,15 @@ What makes Flowmingo unique?</h2>
 <h3>1.⁠ Live Graph-Based Transaction Monitoring:</h3><br>
 Every transaction is a directed edge in a Neo4j graph. Money movement patterns become 
 visible as network topology; no flat SQL query can see what a graph sees. <br>
-2.⁠ GNN-Powered Fraud Typology Detection: <br>
+<h3>2.⁠ GNN-Powered Fraud Typology Detection: </h3><br>
 PyTorch Geometric GNN trained on known AML typologies: round-tripping, smurfing
 (sub-₹50K structuring), and layering. Louvain Community detection finds fraud rings
 automatically. <br>
-3.⁠ ⁠One-Click FIU Evidence Package: <br>
+<h3>3.⁠ ⁠One-Click FIU Evidence Package: </h3><br>
 When an alert fires, one click compiles the full fund trail, timestamps, KYC data, and an LLM-
 written narrative into a formatted STR/CTR; PMLA-compliant and ready to file in 10
 seconds. <br>
-4.⁠ ⁠ Animated Cytoscape.js Dashboard: <br>
+<h3>4.⁠ ⁠Animated Cytoscape.js Dashboard: </h3><br>
 React frontend renders live fund flow as an animated graph. Investigators see which accounts are involved, 
 the hop sequence, and the risk score, all updating in real time via Kafka streams.
 <img width="866" height="724" alt="Screenshot 2026-03-30 at 11 27 19 PM" src="https://github.com/user-attachments/assets/bb238a4b-1264-4c5e-bea4-efe6ca3df97d" />
