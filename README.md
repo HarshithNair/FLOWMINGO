@@ -1,12 +1,12 @@
 Flowmingo - Where money flows, we watch...
 
 FlowMingo is a real-time financial intelligence platform that transforms banking transactions into
-a live, dynamic graph, which will enable instant detection of fraud as it happens.
+a live, dynamic graph, which will enable instant detection of fraud as it happens. <br>
 Built using Graph AI + Streaming Systems, FlowMingo identifies complex money laundering
-patterns like:
-Round-tripping
-Smurfing
-Layering
+patterns like:<br>
+Round-tripping <br>
+Smurfing <br>
+Layering <br>
 Banks lose billions annually to layered money-laundering schemes, yet most fraud systems analyze
 transactions individually, missing the network-level patterns that reveal criminal rings.
 Flowmingo builds a live transaction graph, streams every payment via Apache Kafka, and runs a
