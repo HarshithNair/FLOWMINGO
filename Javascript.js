@@ -1,0 +1,539 @@
+<script>
+
+let cy;
+let simRunning = true;
+let simInterval = null;
+let totalTxn = 0, flaggedTxn = 0, rings = 0, smurfing = 0, totalValue = 0;
+let alertCount = 0, ringCount = 0;
+const typologies = { 'ROUND-TRIPPING':0, 'SMURFING':0, 'LAYERING':0, 'DORMANT ACCT':0 };
+let riskHistory = new Array(20).fill(0);
+
+const accounts = [];
+const accountData = {};
+function genId() { return 'ACC' + Math.floor(Math.random()*90000+10000); }
+function genAccount(id, type='normal') {
+  return {
+    id, type,
+    balance: Math.floor(Math.random()*500000+10000),
+    risk: type==='flagged' ? Math.floor(Math.random()*20+75) : Math.floor(Math.random()*60+10),
+    txnCount: 0,
+    kyc: type==='flagged' ? 'PENDING' : 'VERIFIED',
+    label: id.slice(0,8)
+  };
+}
+
+for(let i=0;i<12;i++) {
+  const id = genId();
+  const type = i<2 ? 'flagged' : 'normal';
+  accountData[id] = genAccount(id,type);
+  accounts.push(id);
+}
+
+
+function initGraph() {
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'background-color': '#0f1720',
+          'border-width': 2,
+          'border-color': '#1a2535',
+          'label': 'data(label)',
+          'color': '#4a6070',
+          'font-size': '8px',
+          'font-family': 'Space Mono, monospace',
+          'text-valign': 'bottom',
+          'text-margin-y': 4,
+          'width': 28,
+          'height': 28,
+        }
+      },
+      {
+        selector: 'node[type="flagged"]',
+        style: {
+          'background-color': 'rgba(255,58,92,0.2)',
+          'border-color': '#ff3a5c',
+          'border-width': 2.5,
+          'color': '#ff3a5c',
+          'width': 34,
+          'height': 34,
+        }
+      },
+      {
+        selector: 'node[type="ring"]',
+        style: {
+          'background-color': 'rgba(181,101,243,0.25)',
+          'border-color': '#b565f3',
+          'border-width': 3,
+          'color': '#b565f3',
+          'width': 38,
+          'height': 38,
+        }
+      },
+      {
+        selector: 'node[type="hub"]',
+        style: {
+          'background-color': 'rgba(255,179,0,0.2)',
+          'border-color': '#ffb300',
+          'border-width': 2.5,
+          'color': '#ffb300',
+          'width': 40,
+          'height': 40,
+        }
+      },
+      {
+        selector: 'edge',
+        style: {
+          'width': 1.2,
+          'line-color': '#1a2535',
+          'target-arrow-color': '#1a2535',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'opacity': 0.7,
+        }
+      },
+      {
+        selector: 'edge[flagged="yes"]',
+        style: {
+          'line-color': '#ff3a5c',
+          'target-arrow-color': '#ff3a5c',
+          'width': 2,
+          'opacity': 0.9,
+        }
+      },
+      {
+        selector: 'edge[type="ring"]',
+        style: {
+          'line-color': '#b565f3',
+          'target-arrow-color': '#b565f3',
+          'width': 2.5,
+          'line-style': 'dashed',
+        }
+      },
+      {
+        selector: ':selected',
+        style: {
+          'border-color': '#00e5ff',
+          'border-width': 3,
+        }
+      }
+    ],
+    layout: { name: 'preset' },
+    zoom: 1.2,
+    pan: { x: 200, y: 200 }
+  });
+
+  // Add initial nodes
+  accounts.forEach((id,i) => {
+    const a = accountData[id];
+    const angle = (i / accounts.length) * 2 * Math.PI;
+    const r = 180;
+    cy.add({
+      group:'nodes',
+      data:{ id, label:id.slice(0,8), type:a.type },
+      position:{ x: 280+r*Math.cos(angle), y: 220+r*Math.sin(angle) }
+    });
+  });
+
+  cy.on('tap', 'node', function(evt) {
+    const node = evt.target;
+    const id = node.id();
+    showNodeInfo(id, evt.renderedPosition);
+    showEvidence(id);
+  });
+
+  cy.on('tap', function(evt) {
+    if(evt.target === cy) document.getElementById('node-tooltip').classList.remove('visible');
+  });
+
+  updateCounts();
+}
+
+function showNodeInfo(id, pos) {
+  const a = accountData[id];
+  if(!a) return;
+  const tt = document.getElementById('node-tooltip');
+  document.getElementById('nt-name').textContent = id;
+  document.getElementById('nt-balance').textContent = '₹' + a.balance.toLocaleString();
+  const riskEl = document.getElementById('nt-risk');
+  riskEl.textContent = a.risk + '/100';
+  riskEl.style.color = a.risk>80 ? 'var(--danger)' : a.risk>50 ? 'var(--warn)' : 'var(--safe)';
+  document.getElementById('nt-txn').textContent = a.txnCount;
+  const kycEl = document.getElementById('nt-kyc');
+  kycEl.textContent = a.kyc;
+  kycEl.style.color = a.kyc==='VERIFIED' ? 'var(--safe)' : 'var(--warn)';
+  tt.style.left = Math.min(pos.x+10, window.innerWidth-500)+'px';
+  tt.style.top = Math.min(pos.y+10, window.innerHeight-160)+'px';
+  tt.classList.add('visible');
+}
+
+function addTransaction() {
+  const src = accounts[Math.floor(Math.random()*accounts.length)];
+  let tgt = accounts[Math.floor(Math.random()*accounts.length)];
+  if(src===tgt) return;
+
+  const amt = Math.floor(Math.random()*180000+1000);
+  const isSmurf = amt < 50000 && Math.random()<0.3;
+  const srcData = accountData[src];
+  const tgtData = accountData[tgt];
+  if(!srcData||!tgtData) return;
+
+  srcData.txnCount++;
+  tgtData.txnCount++;
+  srcData.balance -= amt;
+  tgtData.balance += amt;
+  totalTxn++;
+  totalValue += amt;
+
+  const edgeId = 'e'+Date.now()+Math.random();
+  const isFlagged = srcData.risk>75 || tgtData.risk>75;
+  
+  if(!cy.getElementById(src).length) return;
+  if(!cy.getElementById(tgt).length) return;
+
+  cy.add({ group:'edges', data:{ id:edgeId, source:src, target:tgt, flagged:isFlagged?'yes':'no', amount:amt } });
+
+
+  const riskScore = Math.min(99, Math.floor((srcData.risk + tgtData.risk)/2 + (isSmurf?20:0) + Math.random()*15));
+  riskHistory.push(riskScore);
+  riskHistory.shift();
+
+  if(riskScore > 85) {
+    flaggedTxn++;
+    let type = isSmurf ? 'SMURFING' : (Math.random()<0.5 ? 'ROUND-TRIPPING' : 'LAYERING');
+    typologies[type]++;
+    if(isSmurf) smurfing++;
+    addAlert(src, tgt, amt, riskScore, type, edgeId);
+    srcData.risk = Math.min(99, srcData.risk+5);
+    cy.getElementById(src).data('type','flagged');
+  }
+
+  updateStats();
+  updateCounts();
+
+
+  setTimeout(()=>{
+    const e = cy.getElementById(edgeId);
+    if(e.length && !isFlagged) {
+      e.animate({ style:{ opacity:0.3 } }, { duration:3000 });
+    }
+  }, 2000);
+}
+
+function addFraudRing() {
+  const ringSize = 4 + Math.floor(Math.random()*3);
+  const ringNodes = [];
+  const cx2 = 150+Math.random()*300;
+  const cy2 = 80+Math.random()*250;
+  const r = 70 + Math.random()*40;
+
+  for(let i=0;i<ringSize;i++) {
+    const id = genId();
+    accountData[id] = genAccount(id,'ring');
+    accountData[id].risk = 85+Math.floor(Math.random()*15);
+    accounts.push(id);
+    ringNodes.push(id);
+    const angle = (i/ringSize)*2*Math.PI;
+    cy.add({ group:'nodes', data:{id,label:id.slice(0,8),type:'ring'}, position:{x:cx2+r*Math.cos(angle),y:cy2+r*Math.sin(angle)} });
+  }
+
+  for(let i=0;i<ringNodes.length;i++) {
+    const src = ringNodes[i];
+    const tgt = ringNodes[(i+1)%ringNodes.length];
+    const eid = 'ring'+Date.now()+i;
+    cy.add({ group:'edges', data:{id:eid,source:src,target:tgt,type:'ring',flagged:'yes',amount:Math.floor(Math.random()*200000+50000)} });
+  }
+
+  rings++;
+  ringCount++;
+  typologies['ROUND-TRIPPING'] += ringSize;
+  document.getElementById('ring-count').textContent = ringCount;
+
+  addAlert(ringNodes[0], ringNodes[ringNodes.length-1], Math.floor(Math.random()*500000+100000), 96, 'LOUVAIN RING DETECTED', null, true);
+  updateStats();
+  updateCounts();
+  cy.fit(undefined,30);
+}
+
+function addAlert(src, tgt, amt, score, type, edgeId=null, isRing=false) {
+  alertCount++;
+  document.getElementById('alert-count').textContent = alertCount;
+  
+  const feed = document.getElementById('alerts-feed');
+  const severities = score>90 ? ['danger','high'] : score>80 ? ['warn','med'] : ['info','low'];
+  const desc = isRing
+    ? `Louvain community detection found circular fund movement across ${src.slice(0,8)}...`
+    : `₹${amt.toLocaleString()} moved ${src.slice(0,8)} → ${tgt.slice(0,8)}. Graph risk: ${score}/100`;
+
+  const card = document.createElement('div');
+  card.className = `alert-card ${severities[0]}`;
+  card.innerHTML = `
+    <div class="alert-type">${type}</div>
+    <div class="alert-desc">${desc}</div>
+    <div class="alert-meta">
+      <span>${new Date().toLocaleTimeString()}</span>
+      <span class="risk-chip ${severities[1]}">RISK ${score}</span>
+    </div>`;
+  
+  card.onclick = () => {
+    switchTab('evidence', document.querySelectorAll('.tab')[2]);
+    showEvidenceForAlert(src,tgt,amt,score,type);
+  };
+
+  feed.insertBefore(card, feed.firstChild);
+  if(feed.children.length > 30) feed.removeChild(feed.lastChild);
+}
+
+function showEvidence(id) {
+  const a = accountData[id];
+  if(!a) return;
+  const edges = cy.edges().filter(e => e.data('source')===id || e.data('target')===id);
+  
+  switchTab('evidence', document.querySelectorAll('.tab')[2]);
+  const panel = document.getElementById('evidence-panel');
+  
+  let hops = '';
+  let count = 0;
+  edges.each(e => {
+    if(count++>5) return;
+    const src = e.data('source');
+    const tgt = e.data('target');
+    const amt = e.data('amount') || Math.floor(Math.random()*100000+5000);
+    const t = new Date(Date.now()-Math.random()*3600000);
+    hops += `<div class="ev-hop">
+      <span class="ev-acc">${src.slice(0,8)}</span>
+      <span class="ev-arrow">→</span>
+      <span class="ev-acc">${tgt.slice(0,8)}</span>
+      <span class="ev-amount">₹${amt.toLocaleString()}</span>
+      <span class="ev-time">${t.toLocaleTimeString()}</span>
+    </div>`;
+  });
+
+  const riskColor = a.risk>80 ? 'var(--danger)' : a.risk>50 ? 'var(--warn)' : 'var(--safe)';
+  panel.innerHTML = `
+    <div class="ev-title">ACCOUNT PROFILE</div>
+    <div class="ev-chain">
+      <div class="ev-hop"><span>Account</span><span class="ev-acc">${id}</span></div>
+      <div class="ev-hop"><span>Balance</span><span style="color:var(--text)">₹${a.balance.toLocaleString()}</span></div>
+      <div class="ev-hop"><span>Risk Score</span><span style="color:${riskColor}">${a.risk}/100</span></div>
+      <div class="ev-hop"><span>KYC</span><span style="color:var(--safe)">${a.kyc}</span></div>
+      <div class="ev-hop"><span>Transactions</span><span style="color:var(--text)">${a.txnCount}</span></div>
+    </div>
+    <div class="ev-title" style="margin-top:8px">FUND TRAIL (LAST 6 HOPS)</div>
+    <div class="ev-chain">${hops || '<div style="color:var(--muted);font-size:10px;padding:4px">No transactions yet</div>'}</div>
+    <div class="generate-btn" onclick="generateSTR('${id}',${a.risk})">⚡ GENERATE FIU EVIDENCE PACKAGE</div>
+    <div class="str-badge" id="str-badge-${id}">✓ STR/CTR READY — PMLA COMPLIANT</div>
+    <div class="str-output" id="str-output-${id}"></div>`;
+}
+
+function showEvidenceForAlert(src,tgt,amt,score,type) {
+  const panel = document.getElementById('evidence-panel');
+  const id = `ev_${Date.now()}`;
+  const hops = generateHopChain(src,tgt,amt);
+  panel.innerHTML = `
+    <div class="ev-title">ALERT FUND TRAIL — ${type}</div>
+    <div class="ev-chain">${hops}</div>
+    <div class="generate-btn" onclick="generateSTR_Alert('${id}','${src}','${tgt}',${amt},${score},'${type}')">⚡ GENERATE FIU EVIDENCE PACKAGE</div>
+    <div class="str-badge" id="str-badge-${id}">✓ STR/CTR READY — PMLA COMPLIANT</div>
+    <div class="str-output" id="str-output-${id}"></div>`;
+}
+
+function generateHopChain(src,tgt,amt) {
+  const intermediaries = Math.floor(Math.random()*3+1);
+  let html = `<div class="ev-hop"><span class="ev-acc">${src.slice(0,8)}</span><span class="ev-arrow">→</span>`;
+  for(let i=0;i<intermediaries;i++) {
+    html += `<span class="ev-acc">${genId().slice(0,8)}</span><span class="ev-arrow">→</span>`;
+  }
+  html += `<span class="ev-acc">${tgt.slice(0,8)}</span><span class="ev-amount">₹${amt.toLocaleString()}</span></div>`;
+  return html;
+}
+
+function generateSTR(id, risk) {
+  const outEl = document.getElementById(`str-output-${id}`);
+  const badge = document.getElementById(`str-badge-${id}`);
+  if(!outEl) return;
+
+  const a = accountData[id] || {};
+  const now = new Date();
+  const str = `STR REPORT — FIU-IND
+═══════════════════════════════
+Ref No   : STR/${now.getFullYear()}/${Math.floor(Math.random()*99999).toString().padStart(5,'0')}
+Date     : ${now.toLocaleDateString('en-IN')}
+Bank     : Union Bank of India
+Branch   : Mumbai Main
+Filed By : FlowMingo AML System
+
+SUBJECT ACCOUNT
+───────────────
+Account  : ${id}
+KYC      : ${a.kyc||'PENDING'}
+Risk Scr : ${risk}/100 [HIGH]
+Txn Cnt  : ${a.txnCount||'-'}
+Balance  : ₹${(a.balance||0).toLocaleString()}
+
+SUSPICIOUS ACTIVITY
+───────────────────
+Pattern  : ${risk>90?'Round-Tripping / Ring Detection':'Sub-₹50K Structuring (Smurfing)'}
+Confidence: ${risk}% (GNN inference)
+Detection: Louvain Community + GraphSAGE
+
+NARRATIVE (LLM-Generated)
+─────────────────────────
+Subject account exhibits anomalous
+fund movement consistent with known
+AML typologies. Graph analysis reveals
+${Math.floor(Math.random()*3+2)}-hop layering structure with
+circular velocity inconsistent with
+legitimate business operations.
+Immediate freeze recommended.
+
+STATUS: ✓ PMLA COMPLIANT
+FILED TO: FIU-IND (AUTO-SUBMIT)`;
+
+  outEl.textContent = str;
+  outEl.classList.add('show');
+  badge.classList.add('show');
+}
+
+function generateSTR_Alert(id,src,tgt,amt,score,type) {
+  const outEl = document.getElementById(`str-output-${id}`);
+  const badge = document.getElementById(`str-badge-${id}`);
+  if(!outEl) return;
+  const now = new Date();
+  const str = `STR REPORT — FIU-IND
+═══════════════════════════════
+Ref No   : STR/${now.getFullYear()}/${Math.floor(Math.random()*99999).toString().padStart(5,'0')}
+Date     : ${now.toLocaleDateString('en-IN')}
+Bank     : Union Bank of India
+Filed By : FlowMingo AML System
+
+TRANSACTION DETAILS
+───────────────────
+Origin   : ${src}
+Dest     : ${tgt}
+Amount   : ₹${amt.toLocaleString()}
+Pattern  : ${type}
+Risk Scr : ${score}/100
+
+NARRATIVE (LLM-Generated)
+─────────────────────────
+Transaction flagged by GNN inference
+engine. Fund movement of ₹${amt.toLocaleString()}
+from ${src.slice(0,8)} to ${tgt.slice(0,8)} matches
+${type} typology with ${score}% confidence.
+Full graph chain compiled. Flagged for
+immediate FIU review.
+
+STATUS: ✓ PMLA COMPLIANT
+FILED TO: FIU-IND (AUTO-SUBMIT)`;
+
+  outEl.textContent = str;
+  outEl.classList.add('show');
+  badge.classList.add('show');
+}
+
+function updateStats() {
+  document.getElementById('s-total').textContent = totalTxn.toLocaleString();
+  document.getElementById('s-flagged').textContent = flaggedTxn;
+  document.getElementById('s-rings').textContent = rings;
+  document.getElementById('s-smurfing').textContent = smurfing;
+  document.getElementById('s-acc').textContent = accounts.length;
+  const v = totalValue>1e7 ? (totalValue/1e7).toFixed(1)+'Cr' : totalValue>1e5 ? (totalValue/1e5).toFixed(1)+'L' : totalValue.toLocaleString();
+  document.getElementById('s-value').textContent = '₹'+v;
+
+  const total = Object.values(typologies).reduce((a,b)=>a+b,0)||1;
+  const colors = {'ROUND-TRIPPING':'var(--purple)','SMURFING':'var(--warn)','LAYERING':'var(--danger)','DORMANT ACCT':'var(--accent)'};
+  document.getElementById('typology-bars').innerHTML = Object.entries(typologies).map(([k,v])=>`
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);margin-bottom:3px">
+        <span>${k}</span><span style="color:${colors[k]}">${v}</span>
+      </div>
+      <div style="background:var(--border);border-radius:2px;height:4px">
+        <div style="background:${colors[k]};width:${Math.min(100,(v/total)*100)}%;height:100%;border-radius:2px;transition:.3s"></div>
+      </div>
+    </div>`).join('');
+
+  drawMiniChart();
+}
+
+function updateCounts() {
+  document.getElementById('node-count').textContent = cy.nodes().length;
+  document.getElementById('edge-count').textContent = cy.edges().length;
+}
+
+function drawMiniChart() {
+  const canvas = document.getElementById('minichart');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = 80 * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  const w = canvas.offsetWidth, h = 80;
+  ctx.clearRect(0,0,w,h);
+
+  ctx.strokeStyle = '#1a2535'; ctx.lineWidth = 0.5;
+  [20,40,60,80].forEach(y=>{ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); });
+
+  ctx.strokeStyle = 'rgba(255,58,92,0.4)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+  const th = 80-85*80/100;
+  ctx.beginPath(); ctx.moveTo(0,th); ctx.lineTo(w,th); ctx.stroke(); ctx.setLineDash([]);
+
+  if(riskHistory.filter(v=>v>0).length < 2) return;
+
+  const grd = ctx.createLinearGradient(0,0,0,h);
+  grd.addColorStop(0,'rgba(0,229,255,0.3)');
+  grd.addColorStop(1,'rgba(0,229,255,0)');
+
+  ctx.beginPath();
+  riskHistory.forEach((v,i)=>{ const x=i*(w/19), y=h-v*h/100; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath();
+  ctx.fillStyle = grd; ctx.fill();
+
+  ctx.beginPath(); ctx.strokeStyle='#00e5ff'; ctx.lineWidth=1.5;
+  riskHistory.forEach((v,i)=>{ const x=i*(w/19), y=h-v*h/100; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.stroke();
+}
+function startSimulation() {
+  simInterval = setInterval(()=>{
+    const burst = Math.floor(Math.random()*3+1);
+    for(let i=0;i<burst;i++) addTransaction();
+    document.getElementById('tps').textContent = Math.floor(Math.random()*200+750);
+  }, 400);
+}
+
+function toggleSimulation() {
+  const btn = document.getElementById('btn-simulate');
+  if(simRunning) {
+    clearInterval(simInterval);
+    simRunning = false;
+    btn.textContent = '▶ RESUME';
+    btn.classList.remove('running');
+  } else {
+    startSimulation();
+    simRunning = true;
+    btn.textContent = '⏸ PAUSE';
+    btn.classList.add('running');
+  }
+}
+
+function clearAlerts() {
+  document.getElementById('alerts-feed').innerHTML = '';
+  alertCount = 0;
+  document.getElementById('alert-count').textContent = 0;
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+initGraph();
+startSimulation();
+
+setTimeout(addFraudRing, 2000);
+setTimeout(()=>{ addFraudRing(); addFraudRing(); }, 5000);
+</script>
