@@ -1,4 +1,4 @@
-Flowmingo - Where money flows, we watch...
+<h1>Flowmingo - Where money flows, we watch...</h1>
 
 FlowMingo is a real-time financial intelligence platform that transforms banking transactions into
 a live, dynamic graph, which will enable instant detection of fraud as it happens. <br>
@@ -19,7 +19,7 @@ into a single button press. <br>
 What makes Flowmingo unique?</h2>
 <br>
 
-1.⁠ Live Graph-Based Transaction Monitoring:<br>
+<h3>1.⁠ Live Graph-Based Transaction Monitoring:</h3><br>
 Every transaction is a directed edge in a Neo4j graph. Money movement patterns become 
 visible as network topology; no flat SQL query can see what a graph sees. <br>
 2.⁠ GNN-Powered Fraud Typology Detection: <br>
