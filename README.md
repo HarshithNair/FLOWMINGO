@@ -18,6 +18,7 @@ into a single button press. <br>
 <h2>
 What makes Flowmingo unique?</h2>
 <br>
+Click <a href="file:///Users/rakeshnair/Downloads/Flowmingo%20code.html">HERE</a> to check out the working model.
 
 <h3>1.⁠ Live Graph-Based Transaction Monitoring:</h3><br>
 Every transaction is a directed edge in a Neo4j graph. Money movement patterns become 
@@ -33,4 +34,7 @@ seconds. <br>
 <h3>4.⁠ ⁠Animated Cytoscape.js Dashboard: </h3><br>
 React frontend renders live fund flow as an animated graph. Investigators see which accounts are involved, 
 the hop sequence, and the risk score, all updating in real time via Kafka streams.
-<img width="866" height="724" alt="Screenshot 2026-03-30 at 11 27 19 PM" src="https://github.com/user-attachments/assets/bb238a4b-1264-4c5e-bea4-efe6ca3df97d" />
+<img width="866" height="724" alt="Screenshot 2026-03-30 at 11 27 19 PM" src="https://github.com/user-attachments/assets/bb238a4b-1264-4c5e-bea4-efe6ca3df97d" /> <br>
+Created by: <br>
+Harshith Nair <br>
+Rishi Savla 
