@@ -16,7 +16,7 @@ One-click "Evidence Package" generator compiles the full transaction chain, KYC 
 narrative into a FIU-ready STR/CTR report in under 10 seconds, turning a 4-hour compliance task
 into a single button press. <br>
 <h2>
-What makes Flowmingo unique?<\h2>
+What makes Flowmingo unique?</h2>
 <br>
 
 1.⁠ Live Graph-Based Transaction Monitoring:<br>
