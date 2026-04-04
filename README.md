@@ -33,7 +33,7 @@ seconds. <br>
 <h3>4.⁠ ⁠Animated Cytoscape.js Dashboard: </h3><br>
 The React frontend renders the live fund flow as an animated graph. Investigators see which accounts are involved, 
 the hop sequence, and the risk score, all updating in real time via Kafka streams. <br>
-So all in all, Flowmingo is a real-time fraud detection system that uses graph-based analysis and AI to track how money moves and spot suspicious patterns instantly.
+So all in all, Flowmingo is a real-time fraud detection system that uses graph-based analysis and AI to track how money moves and spot suspicious patterns instantly. <br>
 <img width="866" height="724" alt="Screenshot 2026-03-30 at 11 27 19 PM" src="https://github.com/user-attachments/assets/bb238a4b-1264-4c5e-bea4-efe6ca3df97d" /> <br>
 Created by: <br>
 Harshith Nair <br>
