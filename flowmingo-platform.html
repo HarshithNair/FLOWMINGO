@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowMingo — AML Intelligence Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060a0f;
+  --panel: #0b1118;
+  --panel2: #0d1520;
+  --panel3: #111c28;
+  --border: #18283a;
+  --border2: #1e3347;
+  --accent: #00e5ff;
+  --accent2: #00b8d4;
+  --danger: #ff3a5c;
+  --warn: #ffb300;
+  --safe: #00e676;
+  --purple: #b565f3;
+  --pink: #ff6eb4;
+  --text: #c8d8e8;
+  --text2: #8aaabf;
+  --muted: #3d5a70;
+  --glow-accent: 0 0 24px rgba(0,229,255,0.25);
+  --glow-danger: 0 0 24px rgba(255,58,92,0.25);
+  --glow-safe: 0 0 24px rgba(0,230,118,0.25);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; background:var(--bg); color:var(--text); font-family:'Syne',sans-serif; overflow:hidden; }
+
+/* ── TOPBAR ── */
+.topbar {
+  height:56px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px; background:var(--panel); border-bottom:1px solid var(--border);
+  position:relative; z-index:100; flex-shrink:0;
+}
+.logo { display:flex; align-items:center; gap:12px; }
+.logo-flamingo { font-size:24px; filter:drop-shadow(0 0 8px rgba(0,229,255,0.6)); }
+.logo-text { font-size:20px; font-weight:900; letter-spacing:3px; color:var(--accent); text-shadow:var(--glow-accent); }
+.logo-sub { font-size:8px; font-family:'Space Mono',monospace; color:var(--muted); letter-spacing:4px; margin-top:2px; }
+.topbar-center { display:flex; gap:4px; }
+.nav-tab {
+  padding:8px 18px; font-size:11px; font-family:'Space Mono',monospace; letter-spacing:2px;
+  cursor:pointer; color:var(--muted); background:transparent; border:1px solid transparent;
+  border-radius:4px; transition:all .2s; white-space:nowrap;
+}
+.nav-tab:hover { color:var(--text2); border-color:var(--border2); }
+.nav-tab.active { color:var(--accent); border-color:rgba(0,229,255,0.3); background:rgba(0,229,255,0.06); }
+.topbar-right { display:flex; align-items:center; gap:16px; }
+.live-chip { display:flex; align-items:center; gap:6px; font-size:10px; font-family:'Space Mono',monospace; }
+.dot { width:7px; height:7px; border-radius:50%; animation:pulse 1.5s infinite; }
+.dot.green { background:var(--safe); box-shadow:0 0 6px var(--safe); }
+.dot.warn  { background:var(--warn); box-shadow:0 0 6px var(--warn); }
+.tps { font-family:'Space Mono',monospace; font-size:11px; color:var(--accent); background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.2); padding:4px 10px; border-radius:3px; }
+
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.5)} }
+
+/* ── LAYOUT ── */
+.app { display:flex; flex-direction:column; height:100vh; }
+.pages { flex:1; overflow:hidden; position:relative; }
+.page { position:absolute; inset:0; overflow-y:auto; padding:24px; display:none; flex-direction:column; gap:20px; }
+.page.active { display:flex; }
+.page::-webkit-scrollbar { width:5px; }
+.page::-webkit-scrollbar-track { background:transparent; }
+.page::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+
+/* ── DASHBOARD PAGE ── */
+.stats-row { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+.stat-card {
+  background:var(--panel); border:1px solid var(--border); border-radius:8px;
+  padding:16px 14px; position:relative; overflow:hidden;
+}
+.stat-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:var(--c, var(--accent));
+}
+.stat-num { font-size:26px; font-weight:900; color:var(--c, var(--accent)); line-height:1; }
+.stat-lbl { font-size:9px; font-family:'Space Mono',monospace; color:var(--muted); letter-spacing:2px; margin-top:6px; }
+.stat-delta { font-size:9px; font-family:'Space Mono',monospace; margin-top:4px; }
+
+.dash-grid { display:grid; grid-template-columns:1fr 380px; gap:16px; }
+.panel-box { background:var(--panel); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.panel-hdr { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.panel-title { font-size:10px; font-family:'Space Mono',monospace; color:var(--muted); letter-spacing:3px; }
+.panel-body { padding:16px; }
+
+.monitor-area { position:relative; min-height:320px; background:var(--panel2); border-radius:6px; overflow:hidden; }
+#monitor-canvas { width:100%; height:320px; display:block; }
+
+.alert-stream { max-height:340px; overflow-y:auto; }
+.alert-stream::-webkit-scrollbar { width:3px; }
+.alert-stream::-webkit-scrollbar-thumb { background:var(--border2); }
+.stream-item {
+  padding:10px 14px; border-bottom:1px solid var(--border);
+  display:flex; gap:12px; align-items:flex-start; cursor:pointer;
+  transition:background .15s; animation:fadeSlide .3s ease;
+}
+.stream-item:hover { background:var(--panel2); }
+@keyframes fadeSlide { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+.stream-dot { width:6px; height:6px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+.stream-dot.danger { background:var(--danger); box-shadow:0 0 5px var(--danger); }
+.stream-dot.warn   { background:var(--warn);   box-shadow:0 0 5px var(--warn); }
+.stream-dot.safe   { background:var(--safe);   box-shadow:0 0 5px var(--safe); }
+.stream-dot.purple { background:var(--purple); box-shadow:0 0 5px var(--purple); }
+.stream-content { flex:1; min-width:0; }
+.stream-type { font-size:9px; font-family:'Space Mono',monospace; letter-spacing:2px; margin-bottom:3px; }
+.stream-desc { font-size:11px; color:var(--text2); line-height:1.4; }
+.stream-meta { font-size:9px; font-family:'Space Mono',monospace; color:var(--muted); margin-top:4px; }
+.risk-pill {
+  font-size:9px; font-family:'Space Mono',monospace; padding:2px 7px; border-radius:2px; flex-shrink:0;
+  font-weight:700; align-self:center;
+}
+.risk-pill.h { background:rgba(255,58,92,.15); color:var(--danger); border:1px solid rgba(255,58,92,.35); }
+.risk-pill.m { background:rgba(255,179,0,.12); color:var(--warn);   border:1px solid rgba(255,179,0,.3); }
+.risk-pill.l { background:rgba(0,230,118,.1);  color:var(--safe);   border:1px solid rgba(0,230,118,.25); }
+.risk-pill.p { background:rgba(181,101,243,.1);color:var(--purple); border:1px solid rgba(181,101,243,.3); }
+
+.typo-bars { display:flex; flex-direction:column; gap:10px; }
+.typo-row { display:flex; flex-direction:column; gap:4px; }
+.typo-lbl { display:flex; justify-content:space-between; font-size:9px; font-family:'Space Mono',monospace; color:var(--muted); }
+.typo-bar-bg { background:var(--border); border-radius:2px; height:5px; }
+.typo-bar-fill { height:100%; border-radius:2px; transition:width .5s ease; }
+
+/* ── COMPLAINT PAGE ── */
+.complaint-wrap { max-width:760px; margin:0 auto; width:100%; }
+.form-section { background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:16px; }
+.form-section-hdr { padding:14px 20px; background:var(--panel2); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+.form-section-hdr .step { width:22px; height:22px; border-radius:50%; background:rgba(0,229,255,0.15); border:1px solid rgba(0,229,255,0.4); display:flex; align-items:center; justify-content:center; font-size:10px; font-family:'Space Mono',monospace; color:var(--accent); flex-shrink:0; }
+.form-section-hdr .section-title { font-size:12px; font-family:'Space Mono',monospace; letter-spacing:2px; color:var(--text2); }
+.form-body { padding:20px; display:flex; flex-direction:column; gap:16px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-row.single { grid-template-columns:1fr; }
+.form-row.triple { grid-template-columns:1fr 1fr 1fr; }
+.field { display:flex; flex-direction:column; gap:6px; }
+.field label { font-size:9px; font-family:'Space Mono',monospace; color:var(--muted); letter-spacing:2px; }
+.field input, .field select, .field textarea {
+  background:var(--panel2); border:1px solid var(--border2); border-radius:5px;
+  padding:10px 12px; color:var(--text); font-family:'Space Mono',monospace; font-size:11px;
+  outline:none; transition:border .2s, box-shadow .2s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color:rgba(0,229,255,0.5); box-shadow:0 0 0 3px rgba(0,229,255,0.07);
+}
+.field select { cursor:pointer; }
+.field select option { background:var(--panel2); }
+.field textarea { resize:vertical; min-height:80px; line-height:1.6; }
+.field input::placeholder, .field textarea::placeholder { color:var(--muted); }
+
+.typology-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.typo-card {
+  background:var(--panel2); border:1px solid var(--border2); border-radius:6px;
+  padding:14px; cursor:pointer; transition:all .2s; position:relative;
+}
+.typo-card:hover { border-color:var(--border2); }
+.typo-card.selected { border-color:rgba(0,229,255,0.5); background:rgba(0,229,255,0.06); }
+.typo-card.selected .typo-check { display:flex; }
+.typo-check { display:none; position:absolute; top:10px; right:10px; width:16px; height:16px; border-radius:50%; background:var(--accent); align-items:center; justify-content:center; font-size:9px; color:var(--bg); }
+.typo-icon { font-size:20px; margin-bottom:8px; }
+.typo-name { font-size:11px; font-weight:700; margin-bottom:4px; }
+.typo-desc { font-size:10px; font-family:'Space Mono',monospace; color:var(--muted); line-height:1.5; }
+
+.amount-input-wrap { position:relative; }
+.amount-prefix { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-family:'Space Mono',monospace; font-size:12px; color:var(--muted); pointer-events:none; }
+.amount-input-wrap input { padding-left:28px !important; }
+
+.submit-btn {
+  padding:14px 32px; background:linear-gradient(135deg,rgba(0,229,255,.2),rgba(181,101,243,.2));
+  border:1px solid rgba(0,229,255,.5); border-radius:6px; color:var(--accent);
+  font-family:'Syne',sans-serif; font-size:13px; font-weight:800; letter-spacing:2px;
+  cursor:pointer; transition:all .2s; width:100%; margin-top:4px;
+}
+.submit-btn:hover { background:linear-gradient(135deg,rgba(0,229,255,.3),rgba(181,101,243,.3)); box-shadow:var(--glow-accent); transform:translateY(-1px); }
+.submit-btn:active { transform:translateY(0); }
+
+.success-toast {
+  position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(80px);
+  background:var(--panel); border:1px solid rgba(0,230,118,.4); border-radius:8px;
+  padding:14px 24px; display:flex; align-items:center; gap:12px;
+  font-family:'Space Mono',monospace; font-size:11px; box-shadow:var(--glow-safe);
+  transition:transform .35s cubic-bezier(.175,.885,.32,1.275); z-index:1000; color:var(--safe);
+}
+.success-toast.show { transform:translateX(-50%) translateY(0); }
+
+/* ── RECORDS PAGE ── */
+.records-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.search-wrap { position:relative; flex:1; min-width:200px; }
+.search-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:13px; pointer-events:none; }
+.search-wrap input { width:100%; background:var(--panel); border:1px solid var(--border2); border-radius:5px; padding:9px 12px 9px 32px; color:var(--text); font-family:'Space Mono',monospace; font-size:11px; outline:none; transition:.2s; }
+.search-wrap input:focus { border-color:rgba(0,229,255,0.4); }
+.filter-select { background:var(--panel); border:1px solid var(--border2); border-radius:5px; padding:9px 12px; color:var(--text2); font-family:'Space Mono',monospace; font-size:10px; letter-spacing:1px; outline:none; cursor:pointer; }
+.filter-select option { background:var(--panel2); }
+
+.records-table-wrap { background:var(--panel); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.records-table { width:100%; border-collapse:collapse; }
+.records-table th { padding:10px 14px; text-align:left; font-size:9px; font-family:'Space Mono',monospace; letter-spacing:2px; color:var(--muted); background:var(--panel2); border-bottom:1px solid var(--border); white-space:nowrap; }
+.records-table td { padding:11px 14px; font-size:11px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.records-table tr:last-child td { border-bottom:none; }
+.records-table tr:hover td { background:rgba(255,255,255,0.015); }
+.records-table td.mono { font-family:'Space Mono',monospace; font-size:10px; }
+.typo-badge { display:inline-block; padding:2px 8px; border-radius:2px; font-size:9px; font-family:'Space Mono',monospace; font-weight:700; letter-spacing:1px; }
+.typo-badge.smurfing   { background:rgba(255,179,0,.12);    color:var(--warn);   border:1px solid rgba(255,179,0,.3); }
+.typo-badge.layering   { background:rgba(255,58,92,.12);   color:var(--danger); border:1px solid rgba(255,58,92,.3); }
+.typo-badge.round      { background:rgba(181,101,243,.12); color:var(--purple); border:1px solid rgba(181,101,243,.3); }
+.typo-badge.normal     { background:rgba(0,230,118,.08);   color:var(--safe);   border:1px solid rgba(0,230,118,.25); }
+.typo-badge.dormant    { background:rgba(0,229,255,.08);   color:var(--accent); border:1px solid rgba(0,229,255,.25); }
+.status-dot { display:inline-flex; align-items:center; gap:5px; font-size:10px; font-family:'Space Mono',monospace; }
+.status-dot::before { content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.status-dot.flagged { color:var(--danger); }
+.status-dot.flagged::before { background:var(--danger); box-shadow:0 0 5px var(--danger); }
+.status-dot.cleared { color:var(--safe); }
+.status-dot.cleared::before { background:var(--safe); }
+.status-dot.review  { color:var(--warn); }
+.status-dot.review::before  { background:var(--warn); }
+.action-btn { background:var(--panel2); border:1px solid var(--border2); color:var(--text2); padding:4px 10px; border-radius:3px; font-size:9px; font-family:'Space Mono',monospace; cursor:pointer; letter-spacing:1px; transition:.15s; }
+.action-btn:hover { border-color:rgba(0,229,255,0.4); color:var(--accent); }
+
+.pagination { display:flex; align-items:center; gap:8px; padding:12px 16px; border-top:1px solid var(--border); background:var(--panel2); }
+.page-btn { background:var(--panel); border:1px solid var(--border); color:var(--muted); padding:5px 11px; border-radius:3px; font-family:'Space Mono',monospace; font-size:10px; cursor:pointer; transition:.15s; }
+.page-btn:hover, .page-btn.active { border-color:rgba(0,229,255,0.35); color:var(--accent); background:rgba(0,229,255,0.06); }
+.page-info { font-family:'Space Mono',monospace; font-size:10px; color:var(--muted); margin-left:auto; }
+
+/* ── MODAL ── */
+.modal-backdrop { position:fixed; inset:0; background:rgba(6,10,15,0.85); z-index:500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.modal-backdrop.open { display:flex; }
+.modal { background:var(--panel); border:1px solid var(--border2); border-radius:10px; padding:24px; max-width:520px; width:90%; animation:modalIn .25s ease; }
+@keyframes modalIn { from{opacity:0;transform:scale(.95)} to{opacity:1;transform:scale(1)} }
+.modal-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.modal-title { font-size:14px; font-weight:700; color:var(--accent); }
+.modal-close { background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px; line-height:1; transition:.15s; }
+.modal-close:hover { color:var(--text); }
+.modal-detail { display:flex; flex-direction:column; gap:10px; }
+.modal-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:11px; }
+.modal-row:last-child { border-bottom:none; }
+.modal-key { font-family:'Space Mono',monospace; color:var(--muted); font-size:10px; letter-spacing:1px; }
+.modal-val { font-family:'Space Mono',monospace; font-size:11px; }
+.modal-actions { display:flex; gap:10px; margin-top:20px; }
+.modal-btn { flex:1; padding:10px; border-radius:5px; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:1px; cursor:pointer; transition:.2s; border:1px solid; }
+.modal-btn.flag { background:rgba(255,58,92,.1); border-color:rgba(255,58,92,.4); color:var(--danger); }
+.modal-btn.flag:hover { background:rgba(255,58,92,.2); }
+.modal-btn.clear { background:rgba(0,230,118,.08); border-color:rgba(0,230,118,.3); color:var(--safe); }
+.modal-btn.clear:hover { background:rgba(0,230,118,.15); }
+.modal-btn.report { background:rgba(0,229,255,.08); border-color:rgba(0,229,255,.3); color:var(--accent); }
+.modal-btn.report:hover { background:rgba(0,229,255,.15); }
+
+/* ── CHART CANVAS ── */
+.mini-canvas-wrap { padding:4px 16px 16px; }
+#risk-canvas { width:100%; height:70px; }
+
+/* ── BOTTOM BAR ── */
+.bottombar {
+  height:32px; background:var(--panel); border-top:1px solid var(--border);
+  display:flex; align-items:center; padding:0 20px; gap:24px; flex-shrink:0;
+}
+.bb { font-size:9px; font-family:'Space Mono',monospace; color:var(--muted); }
+.bb span { color:var(--text2); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-flamingo">🦩</div>
+    <div>
+      <div class="logo-text">FLOWMINGO</div>
+      <div class="logo-sub">AML INTELLIGENCE PLATFORM</div>
+    </div>
+  </div>
+  <div class="topbar-center">
+    <div class="nav-tab active" onclick="showPage('dashboard',this)">📊 DASHBOARD</div>
+    <div class="nav-tab" onclick="showPage('complaint',this)">📝 FILE COMPLAINT</div>
+    <div class="nav-tab" onclick="showPage('records',this)">🗂 TRANSFER RECORDS</div>
+  </div>
+  <div class="topbar-right">
+    <div class="live-chip"><div class="dot green"></div> LIVE</div>
+    <div class="live-chip"><div class="dot warn"></div> GNN</div>
+    <div class="tps">⚡ <span id="tps-val">847</span> TXN/s</div>
+  </div>
+</div>
+
+<!-- PAGES -->
+<div class="pages">
+
+  <!-- ══ DASHBOARD ══ -->
+  <div class="page active" id="page-dashboard">
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card" style="--c:var(--accent)">
+        <div class="stat-num" id="d-total">0</div>
+        <div class="stat-lbl">TOTAL TRANSACTIONS</div>
+        <div class="stat-delta" style="color:var(--safe)">↑ live</div>
+      </div>
+      <div class="stat-card" style="--c:var(--danger)">
+        <div class="stat-num" id="d-flagged">0</div>
+        <div class="stat-lbl">FLAGGED</div>
+        <div class="stat-delta" style="color:var(--danger)" id="d-flag-pct">0%</div>
+      </div>
+      <div class="stat-card" style="--c:var(--purple)">
+        <div class="stat-num" id="d-rings">0</div>
+        <div class="stat-lbl">FRAUD RINGS</div>
+        <div class="stat-delta" style="color:var(--purple)">Louvain</div>
+      </div>
+      <div class="stat-card" style="--c:var(--warn)">
+        <div class="stat-num" id="d-smurf">0</div>
+        <div class="stat-lbl">SMURFING</div>
+        <div class="stat-delta" style="color:var(--warn)">sub-₹50K</div>
+      </div>
+      <div class="stat-card" style="--c:var(--safe)">
+        <div class="stat-num" id="d-accs">0</div>
+        <div class="stat-lbl">MONITORED ACCS</div>
+        <div class="stat-delta" style="color:var(--safe)">KYC active</div>
+      </div>
+      <div class="stat-card" style="--c:var(--pink)">
+        <div class="stat-num" id="d-value">₹0</div>
+        <div class="stat-lbl">VOLUME TODAY</div>
+        <div class="stat-delta" style="color:var(--text2)">RTGS+NEFT</div>
+      </div>
+    </div>
+
+    <!-- Main dashboard grid -->
+    <div class="dash-grid">
+
+      <!-- Live Monitor -->
+      <div class="panel-box">
+        <div class="panel-hdr">
+          <span class="panel-title">LIVE TRANSACTION MONITOR</span>
+          <span style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted)">RTGS/NEFT FEED — UBI</span>
+        </div>
+        <div class="panel-body" style="padding:12px;">
+          <div class="monitor-area">
+            <canvas id="monitor-canvas"></canvas>
+          </div>
+          <div class="mini-canvas-wrap" style="padding:12px 0 0 0">
+            <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);letter-spacing:2px;margin-bottom:6px">RISK SCORE TREND (LAST 40 TXN)</div>
+            <canvas id="risk-canvas" height="70"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right sidebar -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <!-- Alert stream -->
+        <div class="panel-box" style="flex:1;">
+          <div class="panel-hdr">
+            <span class="panel-title">ALERT STREAM</span>
+            <span style="font-size:9px;font-family:'Space Mono',monospace;color:var(--danger)" id="d-alert-cnt">0 ALERTS</span>
+          </div>
+          <div class="alert-stream" id="alert-stream" style="max-height:220px;"></div>
+        </div>
+
+        <!-- Typology breakdown -->
+        <div class="panel-box">
+          <div class="panel-hdr">
+            <span class="panel-title">TYPOLOGY BREAKDOWN</span>
+          </div>
+          <div class="panel-body">
+            <div class="typo-bars" id="typo-bars"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ COMPLAINT ══ -->
+  <div class="page" id="page-complaint">
+    <div class="complaint-wrap">
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:22px;font-weight:900;color:var(--accent);letter-spacing:1px;margin-bottom:6px;">FILE A COMPLAINT</div>
+        <div style="font-size:11px;font-family:'Space Mono',monospace;color:var(--muted);">Report suspicious transfer activity to FIU-IND under PMLA 2002</div>
+      </div>
+
+      <!-- Section 1: Account Details -->
+      <div class="form-section">
+        <div class="form-section-hdr">
+          <div class="step">01</div>
+          <span class="section-title">ACCOUNT DETAILS</span>
+        </div>
+        <div class="form-body">
+          <div class="form-row">
+            <div class="field">
+              <label>YOUR ACCOUNT NUMBER</label>
+              <input type="text" id="f-myacc" placeholder="e.g. ACC12345" maxlength="20">
+            </div>
+            <div class="field">
+              <label>SUSPECT ACCOUNT NUMBER</label>
+              <input type="text" id="f-suspacc" placeholder="e.g. ACC67890" maxlength="20">
+            </div>
+          </div>
+          <div class="form-row triple">
+            <div class="field">
+              <label>YOUR BANK</label>
+              <select id="f-mybank">
+                <option value="">Select Bank</option>
+                <option>Union Bank of India</option>
+                <option>State Bank of India</option>
+                <option>HDFC Bank</option>
+                <option>ICICI Bank</option>
+                <option>Axis Bank</option>
+                <option>Kotak Mahindra Bank</option>
+                <option>Punjab National Bank</option>
+                <option>Bank of Baroda</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>SUSPECT BANK</label>
+              <select id="f-suspbank">
+                <option value="">Select Bank</option>
+                <option>Union Bank of India</option>
+                <option>State Bank of India</option>
+                <option>HDFC Bank</option>
+                <option>ICICI Bank</option>
+                <option>Axis Bank</option>
+                <option>Kotak Mahindra Bank</option>
+                <option>Punjab National Bank</option>
+                <option>Bank of Baroda</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>TRANSFER MODE</label>
+              <select id="f-mode">
+                <option value="">Select Mode</option>
+                <option>RTGS</option>
+                <option>NEFT</option>
+                <option>IMPS</option>
+                <option>UPI</option>
+                <option>SWIFT</option>
+                <option>Cheque</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Transaction Details -->
+      <div class="form-section">
+        <div class="form-section-hdr">
+          <div class="step">02</div>
+          <span class="section-title">TRANSACTION DETAILS</span>
+        </div>
+        <div class="form-body">
+          <div class="form-row">
+            <div class="field">
+              <label>TOTAL AMOUNT (₹)</label>
+              <div class="amount-input-wrap">
+                <span class="amount-prefix">₹</span>
+                <input type="number" id="f-amount" placeholder="0.00" min="0">
+              </div>
+            </div>
+            <div class="field">
+              <label>DATE OF TRANSACTION</label>
+              <input type="date" id="f-date">
+            </div>
+          </div>
+          <div class="form-row triple">
+            <div class="field">
+              <label>NUMBER OF TRANSACTIONS</label>
+              <input type="number" id="f-txncount" placeholder="1" min="1">
+            </div>
+            <div class="field">
+              <label>TRANSACTION REFERENCE</label>
+              <input type="text" id="f-ref" placeholder="UTR / Ref No.">
+            </div>
+            <div class="field">
+              <label>TIME OF TRANSACTION</label>
+              <input type="time" id="f-time">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Typology -->
+      <div class="form-section">
+        <div class="form-section-hdr">
+          <div class="step">03</div>
+          <span class="section-title">SUSPECTED MONEY LAUNDERING TYPE</span>
+        </div>
+        <div class="form-body">
+          <div class="typology-grid" id="typology-grid">
+            <div class="typo-card" onclick="selectTypo(this,'smurfing')">
+              <div class="typo-check">✓</div>
+              <div class="typo-icon">🐡</div>
+              <div class="typo-name" style="color:var(--warn)">SMURFING</div>
+              <div class="typo-desc">Multiple small transactions below ₹50,000 to evade reporting thresholds. Structured placement into the financial system.</div>
+            </div>
+            <div class="typo-card" onclick="selectTypo(this,'round-tripping')">
+              <div class="typo-check">✓</div>
+              <div class="typo-icon">🔁</div>
+              <div class="typo-name" style="color:var(--purple)">ROUND-TRIPPING</div>
+              <div class="typo-desc">Funds sent abroad and returned as foreign investment. Circular flow between related entities to disguise origin.</div>
+            </div>
+            <div class="typo-card" onclick="selectTypo(this,'layering')">
+              <div class="typo-check">✓</div>
+              <div class="typo-icon">🔀</div>
+              <div class="typo-name" style="color:var(--danger)">LAYERING</div>
+              <div class="typo-desc">Complex chain of transfers through multiple accounts to obscure the audit trail and distance funds from source.</div>
+            </div>
+            <div class="typo-card" onclick="selectTypo(this,'normal')">
+              <div class="typo-check">✓</div>
+              <div class="typo-icon">📋</div>
+              <div class="typo-name" style="color:var(--safe)">NORMAL TRANSFER</div>
+              <div class="typo-desc">Transaction appears legitimate but warrants monitoring. Filing for record. No specific typology identified yet.</div>
+            </div>
+          </div>
+          <input type="hidden" id="f-typology" value="">
+        </div>
+      </div>
+
+      <!-- Section 4: Evidence & Notes -->
+      <div class="form-section">
+        <div class="form-section-hdr">
+          <div class="step">04</div>
+          <span class="section-title">EVIDENCE & NOTES</span>
+        </div>
+        <div class="form-body">
+          <div class="form-row single">
+            <div class="field">
+              <label>SUSPICIOUS ACTIVITY DESCRIPTION</label>
+              <textarea id="f-desc" placeholder="Describe the suspicious behavior, supporting evidence, behavioral patterns, or reasons for suspicion..."></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>FILED BY (OFFICER NAME)</label>
+              <input type="text" id="f-officer" placeholder="Full name">
+            </div>
+            <div class="field">
+              <label>OFFICER ID / EMPLOYEE NO.</label>
+              <input type="text" id="f-officerid" placeholder="e.g. UBI/AML/001">
+            </div>
+          </div>
+          <div class="form-row single">
+            <div class="field">
+              <label>PRIORITY LEVEL</label>
+              <select id="f-priority">
+                <option value="low">LOW — Monitor only</option>
+                <option value="medium">MEDIUM — Review within 48 hours</option>
+                <option value="high" selected>HIGH — Immediate FIU escalation</option>
+                <option value="critical">CRITICAL — Account freeze requested</option>
+              </select>
+            </div>
+          </div>
+          <button class="submit-btn" onclick="submitComplaint()">⚡ SUBMIT COMPLAINT TO FIU-IND</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ RECORDS ══ -->
+  <div class="page" id="page-records">
+
+    <div class="records-toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Search account, reference, amount..." id="rec-search" oninput="filterRecords()">
+      </div>
+      <select class="filter-select" id="rec-type" onchange="filterRecords()">
+        <option value="">ALL TYPES</option>
+        <option value="smurfing">SMURFING</option>
+        <option value="round-tripping">ROUND-TRIPPING</option>
+        <option value="layering">LAYERING</option>
+        <option value="normal">NORMAL</option>
+      </select>
+      <select class="filter-select" id="rec-status" onchange="filterRecords()">
+        <option value="">ALL STATUS</option>
+        <option value="flagged">FLAGGED</option>
+        <option value="review">REVIEW</option>
+        <option value="cleared">CLEARED</option>
+      </select>
+      <button class="action-btn" style="white-space:nowrap" onclick="exportRecords()">⬇ EXPORT CSV</button>
+    </div>
+
+    <div class="records-table-wrap">
+      <table class="records-table">
+        <thead>
+          <tr>
+            <th>REF ID</th>
+            <th>DATE / TIME</th>
+            <th>FROM ACCOUNT</th>
+            <th>TO ACCOUNT</th>
+            <th>AMOUNT</th>
+            <th>MODE</th>
+            <th>TYPOLOGY</th>
+            <th>RISK</th>
+            <th>STATUS</th>
+            <th>ACTION</th>
+          </tr>
+        </thead>
+        <tbody id="records-tbody"></tbody>
+      </table>
+      <div class="pagination">
+        <button class="page-btn active" id="pg-1" onclick="goPage(1)">1</button>
+        <button class="page-btn" id="pg-2" onclick="goPage(2)">2</button>
+        <button class="page-btn" id="pg-3" onclick="goPage(3)">3</button>
+        <span class="page-info" id="pg-info"></span>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /pages -->
+
+<!-- Bottom bar -->
+<div class="bottombar">
+  <div class="bb">UNION BANK OF INDIA <span>RTGS/NEFT</span></div>
+  <div class="bb">GNN MODEL <span>GraphSAGE v2.1</span></div>
+  <div class="bb">LOUVAIN <span>ACTIVE</span></div>
+  <div class="bb">THRESHOLD <span>RISK &gt; 85</span></div>
+  <div class="bb" style="margin-left:auto">PMLA 2002 COMPLIANT <span style="color:var(--safe)">✓</span></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">TRANSACTION DETAIL</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-detail" id="modal-detail"></div>
+    <div class="modal-actions">
+      <button class="modal-btn flag"   onclick="modalAction('flag')">🚩 FLAG</button>
+      <button class="modal-btn report" onclick="modalAction('report')">📄 STR REPORT</button>
+      <button class="modal-btn clear"  onclick="modalAction('clear')">✓ CLEAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="success-toast" id="toast">
+  <span style="font-size:18px">✓</span>
+  <span id="toast-msg">Complaint filed successfully — STR/CTR generated.</span>
+</div>
+
+<script>
+/* ── DATA ── */
+const modes = ['RTGS','NEFT','IMPS','UPI','SWIFT'];
+const banks = ['UBI','SBI','HDFC','ICICI','Axis','Kotak','PNB','BoB'];
+const typoKeys  = ['smurfing','round-tripping','layering','normal','dormant'];
+const typoCols  = { 'smurfing':'smurfing','round-tripping':'round','layering':'layering','normal':'normal','dormant':'dormant' };
+const statuses  = ['flagged','review','cleared'];
+
+let allRecords = [];
+let filteredRecords = [];
+let currentPage = 1;
+const PER_PAGE = 12;
+
+let totalTxn = 0, flaggedCnt = 0, ringsCnt = 0, smurfCnt = 0, volume = 0;
+let alertCnt = 0;
+const typoCounts = { smurfing:0, 'round-tripping':0, layering:0, normal:0 };
+let riskHistory = new Array(40).fill(0);
+let monitorParticles = [];
+let simRunning = true;
+let selectedModalRec = null;
+
+function rnd(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
+function genAcc() { return 'ACC'+rnd(10000,99999); }
+function genRef() { return 'UTR'+Date.now().toString().slice(-8)+rnd(10,99); }
+function fmtAmt(n) {
+  if(n>=1e7) return '₹'+(n/1e7).toFixed(2)+'Cr';
+  if(n>=1e5) return '₹'+(n/1e5).toFixed(1)+'L';
+  return '₹'+n.toLocaleString('en-IN');
+}
+function fmtDate(d) { return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtTime(d) { return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+function makeRecord(overrides={}) {
+  const typo = typoKeys[rnd(0,4)];
+  const risk = typo==='normal' ? rnd(5,40) : typo==='smurfing' ? rnd(70,99) : typo==='layering' ? rnd(75,99) : rnd(55,95);
+  const now = new Date(Date.now() - rnd(0,3600000));
+  const amt = typo==='smurfing' ? rnd(5000,49999) : rnd(50000,2000000);
+  const status = risk>85 ? 'flagged' : risk>55 ? 'review' : 'cleared';
+  return {
+    ref: genRef(),
+    date: now,
+    from: genAcc(),
+    to: genAcc(),
+    amount: amt,
+    mode: modes[rnd(0,4)],
+    typo,
+    risk,
+    status,
+    bank_from: banks[rnd(0,7)],
+    bank_to: banks[rnd(0,7)],
+    ...overrides
+  };
+}
+
+function seedRecords() {
+  for(let i=0;i<36;i++) {
+    const r = makeRecord();
+    allRecords.push(r);
+    if(r.status==='flagged') flaggedCnt++;
+    if(r.typo==='smurfing') smurfCnt++;
+    typoCounts[r.typo] = (typoCounts[r.typo]||0)+1;
+    volume += r.amount;
+    totalTxn++;
+  }
+  filteredRecords = [...allRecords];
+  renderRecords();
+  updateStats();
+}
+
+/* ── NAV ── */
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='records') { filterRecords(); }
+}
+
+/* ── DASHBOARD ── */
+function updateStats() {
+  document.getElementById('d-total').textContent   = totalTxn.toLocaleString('en-IN');
+  document.getElementById('d-flagged').textContent = flaggedCnt;
+  document.getElementById('d-rings').textContent   = ringsCnt;
+  document.getElementById('d-smurf').textContent   = smurfCnt;
+  document.getElementById('d-accs').textContent    = Math.floor(totalTxn*1.4)+12;
+  document.getElementById('d-value').textContent   = fmtAmt(volume);
+  document.getElementById('d-flag-pct').textContent = totalTxn ? ((flaggedCnt/totalTxn*100).toFixed(1)+'%') : '0%';
+  document.getElementById('d-alert-cnt').textContent = alertCnt+' ALERTS';
+  renderTypoBars();
+}
+
+function renderTypoBars() {
+  const total = Object.values(typoCounts).reduce((a,b)=>a+b,0)||1;
+  const config = [
+    { key:'smurfing',       label:'SMURFING',      color:'var(--warn)' },
+    { key:'round-tripping', label:'ROUND-TRIPPING', color:'var(--purple)' },
+    { key:'layering',       label:'LAYERING',      color:'var(--danger)' },
+    { key:'normal',         label:'NORMAL',        color:'var(--safe)' },
+  ];
+  document.getElementById('typo-bars').innerHTML = config.map(c=>`
+    <div class="typo-row">
+      <div class="typo-lbl"><span>${c.label}</span><span style="color:${c.color}">${typoCounts[c.key]||0}</span></div>
+      <div class="typo-bar-bg">
+        <div class="typo-bar-fill" style="width:${((typoCounts[c.key]||0)/total*100).toFixed(1)}%;background:${c.color}"></div>
+      </div>
+    </div>`).join('');
+}
+
+/* Monitor canvas — animated dots */
+function initMonitor() {
+  const canvas = document.getElementById('monitor-canvas');
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth * devicePixelRatio;
+    canvas.height = canvas.offsetHeight * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function randomParticle() {
+    const x1 = rnd(20, canvas.offsetWidth-20);
+    const y1 = rnd(20, canvas.offsetHeight-20);
+    const x2 = rnd(20, canvas.offsetWidth-20);
+    const y2 = rnd(20, canvas.offsetHeight-20);
+    const high = Math.random() < 0.25;
+    return { x1,y1,x2,y2, progress:0, speed: 0.008+Math.random()*0.015, high, alpha:1 };
+  }
+
+  for(let i=0;i<8;i++) monitorParticles.push(randomParticle());
+
+  function drawGrid() {
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+    ctx.strokeStyle = 'rgba(24,40,58,0.6)';
+    ctx.lineWidth = 0.5;
+    for(let x=0;x<w;x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+    for(let y=0;y<h;y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  }
+
+  function lerp(a,b,t) { return a+(b-a)*t; }
+
+  function frame() {
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = 'rgba(13,21,32,0.95)';
+    ctx.fillRect(0,0,w,h);
+    drawGrid();
+
+    monitorParticles.forEach((p,i) => {
+      p.progress += p.speed;
+      const x = lerp(p.x1,p.x2,p.progress);
+      const y = lerp(p.y1,p.y2,p.progress);
+      const color = p.high ? '#ff3a5c' : '#00e5ff';
+
+      // Trail
+      ctx.beginPath();
+      ctx.moveTo(p.x1,p.y1); ctx.lineTo(x,y);
+      ctx.strokeStyle = p.high ? 'rgba(255,58,92,0.15)' : 'rgba(0,229,255,0.1)';
+      ctx.lineWidth = 1; ctx.stroke();
+
+      // Dot
+      ctx.beginPath();
+      ctx.arc(x,y,3,0,Math.PI*2);
+      ctx.fillStyle = color;
+      ctx.shadowBlur = 10; ctx.shadowColor = color;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Label
+      ctx.fillStyle = p.high ? 'rgba(255,58,92,0.8)' : 'rgba(0,229,255,0.6)';
+      ctx.font = '8px Space Mono, monospace';
+      ctx.fillText(p.high ? '⚠' : '→', x+5, y-4);
+
+      if(p.progress >= 1) monitorParticles[i] = randomParticle();
+    });
+
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+function drawRiskChart() {
+  const canvas = document.getElementById('risk-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = devicePixelRatio||1;
+  canvas.width  = canvas.offsetWidth * dpr;
+  canvas.height = 70 * dpr;
+  ctx.scale(dpr, dpr);
+  const w = canvas.offsetWidth, h = 70;
+  ctx.clearRect(0,0,w,h);
+
+  // Threshold line
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle = 'rgba(255,58,92,0.35)'; ctx.lineWidth = 1;
+  const th = h - (85/100)*h;
+  ctx.beginPath(); ctx.moveTo(0,th); ctx.lineTo(w,th); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,58,92,0.4)'; ctx.font = '8px Space Mono,monospace';
+  ctx.fillText('85', w-18, th-3);
+
+  if(riskHistory.filter(v=>v>0).length < 2) return;
+
+  const pts = riskHistory.map((v,i) => ({ x: i*(w/(riskHistory.length-1)), y: h-v*h/100 }));
+
+  const grd = ctx.createLinearGradient(0,0,0,h);
+  grd.addColorStop(0,'rgba(0,229,255,0.25)');
+  grd.addColorStop(1,'rgba(0,229,255,0)');
+  ctx.beginPath();
+  pts.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+  ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath();
+  ctx.fillStyle = grd; ctx.fill();
+
+  ctx.beginPath(); ctx.strokeStyle='#00e5ff'; ctx.lineWidth=1.5;
+  pts.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+  ctx.stroke();
+}
+
+/* Alert stream */
+function pushAlert(rec) {
+  alertCnt++;
+  document.getElementById('d-alert-cnt').textContent = alertCnt+' ALERTS';
+  const feed = document.getElementById('alert-stream');
+  const dotClass = rec.risk>90 ? 'danger' : rec.risk>75 ? 'warn' : 'purple';
+  const pillClass = rec.risk>90 ? 'h' : rec.risk>75 ? 'm' : 'p';
+  const item = document.createElement('div');
+  item.className = 'stream-item';
+  item.innerHTML = `
+    <div class="stream-dot ${dotClass}"></div>
+    <div class="stream-content">
+      <div class="stream-type" style="color:var(--${dotClass==='danger'?'danger':dotClass==='warn'?'warn':'purple'})">${rec.typo.toUpperCase()}</div>
+      <div class="stream-desc">${fmtAmt(rec.amount)} — ${rec.from.slice(0,8)} → ${rec.to.slice(0,8)}</div>
+      <div class="stream-meta">${fmtTime(rec.date)} · ${rec.mode} · Risk: ${rec.risk}</div>
+    </div>
+    <div class="risk-pill ${pillClass}">${rec.risk}</div>`;
+  item.onclick = () => openModal(rec);
+  feed.insertBefore(item, feed.firstChild);
+  if(feed.children.length > 25) feed.removeChild(feed.lastChild);
+}
+
+/* ── SIMULATION ── */
+function simTick() {
+  const burst = rnd(1,3);
+  for(let i=0;i<burst;i++) {
+    const r = makeRecord();
+    allRecords.unshift(r);
+    if(allRecords.length > 200) allRecords.pop();
+    totalTxn++;
+    volume += r.amount;
+    if(r.status==='flagged') { flaggedCnt++; pushAlert(r); }
+    if(r.typo==='smurfing') smurfCnt++;
+    typoCounts[r.typo] = (typoCounts[r.typo]||0)+1;
+    riskHistory.push(r.risk); riskHistory.shift();
+  }
+  document.getElementById('tps-val').textContent = rnd(750,950);
+  filteredRecords = applyFilters();
+  updateStats();
+  drawRiskChart();
+}
+
+/* ── RECORDS ── */
+function applyFilters() {
+  const q     = document.getElementById('rec-search').value.toLowerCase();
+  const fType = document.getElementById('rec-type').value;
+  const fStat = document.getElementById('rec-status').value;
+  return allRecords.filter(r => {
+    const matchQ = !q || r.ref.toLowerCase().includes(q) || r.from.toLowerCase().includes(q) || r.to.toLowerCase().includes(q) || r.amount.toString().includes(q);
+    const matchT = !fType || r.typo===fType;
+    const matchS = !fStat || r.status===fStat;
+    return matchQ && matchT && matchS;
+  });
+}
+
+function filterRecords() {
+  filteredRecords = applyFilters();
+  currentPage = 1;
+  renderRecords();
+}
+
+function renderRecords() {
+  const tbody = document.getElementById('records-tbody');
+  const start = (currentPage-1)*PER_PAGE;
+  const slice = filteredRecords.slice(start, start+PER_PAGE);
+  document.getElementById('pg-info').textContent = `${start+1}–${Math.min(start+PER_PAGE,filteredRecords.length)} of ${filteredRecords.length}`;
+
+  tbody.innerHTML = slice.map(r => `
+    <tr>
+      <td class="mono" style="color:var(--accent)">${r.ref}</td>
+      <td class="mono" style="color:var(--text2)">${fmtDate(r.date)}<br><span style="color:var(--muted);font-size:9px">${fmtTime(r.date)}</span></td>
+      <td class="mono">${r.from}<br><span style="color:var(--muted);font-size:9px">${r.bank_from}</span></td>
+      <td class="mono">${r.to}<br><span style="color:var(--muted);font-size:9px">${r.bank_to}</span></td>
+      <td class="mono" style="color:var(--warn)">${fmtAmt(r.amount)}</td>
+      <td class="mono" style="color:var(--text2)">${r.mode}</td>
+      <td><span class="typo-badge ${typoCols[r.typo]||'normal'}">${r.typo.toUpperCase()}</span></td>
+      <td class="mono" style="color:${r.risk>85?'var(--danger)':r.risk>55?'var(--warn)':'var(--safe)'}">${r.risk}</td>
+      <td><span class="status-dot ${r.status}">${r.status.toUpperCase()}</span></td>
+      <td><button class="action-btn" onclick='openModalFromRecord(${JSON.stringify(r).replace(/'/g,"&apos;")})'>VIEW</button></td>
+    </tr>`).join('');
+
+  // Pagination
+  const totalPages = Math.ceil(filteredRecords.length/PER_PAGE);
+  [1,2,3].forEach(n => {
+    const btn = document.getElementById('pg-'+n);
+    btn.style.display = n <= Math.max(3,totalPages) ? '' : 'none';
+    btn.classList.toggle('active', n===currentPage);
+    btn.style.opacity = n > totalPages ? '0.3' : '1';
+    btn.style.pointerEvents = n > totalPages ? 'none' : '';
+  });
+}
+
+function openModalFromRecord(r) { openModal(r); }
+
+function goPage(n) {
+  currentPage = n;
+  renderRecords();
+}
+
+function exportRecords() {
+  const rows = [['Ref','Date','From','To','Amount','Mode','Typology','Risk','Status']];
+  filteredRecords.forEach(r => rows.push([r.ref, fmtDate(r.date), r.from, r.to, r.amount, r.mode, r.typo, r.risk, r.status]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='flowmingo_records.csv'; a.click();
+}
+
+/* ── MODAL ── */
+function openModal(r) {
+  selectedModalRec = r;
+  document.getElementById('modal-title').textContent = r.ref;
+  document.getElementById('modal-detail').innerHTML = `
+    <div class="modal-row"><span class="modal-key">FROM</span><span class="modal-val" style="color:var(--accent)">${r.from} (${r.bank_from})</span></div>
+    <div class="modal-row"><span class="modal-key">TO</span><span class="modal-val" style="color:var(--accent)">${r.to} (${r.bank_to})</span></div>
+    <div class="modal-row"><span class="modal-key">AMOUNT</span><span class="modal-val" style="color:var(--warn)">${fmtAmt(r.amount)}</span></div>
+    <div class="modal-row"><span class="modal-key">MODE</span><span class="modal-val">${r.mode}</span></div>
+    <div class="modal-row"><span class="modal-key">DATE</span><span class="modal-val">${fmtDate(r.date)} ${fmtTime(r.date)}</span></div>
+    <div class="modal-row"><span class="modal-key">TYPOLOGY</span><span class="modal-val">${r.typo.toUpperCase()}</span></div>
+    <div class="modal-row"><span class="modal-key">RISK SCORE</span><span class="modal-val" style="color:${r.risk>85?'var(--danger)':r.risk>55?'var(--warn)':'var(--safe)'}">${r.risk}/100</span></div>
+    <div class="modal-row"><span class="modal-key">STATUS</span><span class="modal-val">${r.status.toUpperCase()}</span></div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+function closeModal(evt) {
+  if(!evt || evt.target === document.getElementById('modal-backdrop')) {
+    document.getElementById('modal-backdrop').classList.remove('open');
+  }
+}
+
+function modalAction(action) {
+  if(!selectedModalRec) return;
+  if(action==='flag')   { selectedModalRec.status='flagged'; showToast('Transaction flagged and escalated to FIU-IND.'); }
+  if(action==='clear')  { selectedModalRec.status='cleared'; showToast('Transaction cleared after review.'); }
+  if(action==='report') { showToast('STR/CTR report generated and queued for FIU submission.'); }
+  filterRecords();
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+
+/* ── COMPLAINT ── */
+let selectedTypo = '';
+function selectTypo(el, val) {
+  document.querySelectorAll('.typo-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTypo = val;
+  document.getElementById('f-typology').value = val;
+}
+
+function submitComplaint() {
+  const myAcc   = document.getElementById('f-myacc').value.trim();
+  const suspAcc = document.getElementById('f-suspacc').value.trim();
+  const amount  = document.getElementById('f-amount').value;
+  const typo    = selectedTypo;
+
+  if(!myAcc || !suspAcc || !amount || !typo) {
+    showToast('Please fill all required fields and select a typology.', true);
+    return;
+  }
+
+  const risk = typo==='smurfing'?rnd(80,99):typo==='layering'?rnd(78,99):typo==='round-tripping'?rnd(72,99):rnd(20,50);
+  const rec = makeRecord({
+    ref: 'COMPLAINT-'+Date.now().toString().slice(-6),
+    from: myAcc,
+    to: suspAcc,
+    amount: parseInt(amount)||100000,
+    typo,
+    risk,
+    status: risk>70?'flagged':'review',
+    bank_from: document.getElementById('f-mybank').value||'UBI',
+    bank_to: document.getElementById('f-suspbank').value||'—',
+    mode: document.getElementById('f-mode').value||'NEFT',
+    date: new Date(),
+    manual: true
+  });
+
+  allRecords.unshift(rec);
+  filteredRecords = applyFilters();
+  totalTxn++; volume += rec.amount;
+  if(rec.status==='flagged') { flaggedCnt++; pushAlert(rec); }
+  typoCounts[typo] = (typoCounts[typo]||0)+1;
+  updateStats();
+
+  showToast('Complaint filed successfully — STR/CTR generated & queued for FIU-IND.');
+
+  // Reset
+  ['f-myacc','f-suspacc','f-amount','f-txncount','f-ref','f-officer','f-officerid','f-desc'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.querySelectorAll('.typo-card').forEach(c=>c.classList.remove('selected'));
+  selectedTypo = '';
+}
+
+/* ── TOAST ── */
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  const m = document.getElementById('toast-msg');
+  m.textContent = msg;
+  t.style.borderColor = isErr ? 'rgba(255,58,92,.4)' : 'rgba(0,230,118,.4)';
+  t.style.color = isErr ? 'var(--danger)' : 'var(--safe)';
+  t.style.boxShadow = isErr ? 'var(--glow-danger)' : 'var(--glow-safe)';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3500);
+}
+
+/* ── INIT ── */
+window.addEventListener('load', () => {
+  seedRecords();
+  initMonitor();
+  drawRiskChart();
+  setInterval(simTick, 500);
+  setInterval(drawRiskChart, 500);
+
+  // Set today's date as default
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+});
+</script>
+</body>
+</html>
