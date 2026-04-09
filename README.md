@@ -1,187 +1,110 @@
-# 🦩 FlowMingo — AML Intelligence Platform
+🦩 FlowMingo — AML Intelligence Platform
 
-Full-stack Anti-Money Laundering dashboard with Flask backend + SQLite database.  
-Built for PMLA 2002 compliance. Suitable as evidence for legal / jury presentation.
+FlowMingo is an AI-driven Anti-Money Laundering (AML) intelligence platform designed to monitor, detect, and analyze suspicious financial transactions in real time.
 
----
+It provides a powerful dashboard for financial institutions to identify fraud patterns such as smurfing, layering, and round-tripping, while also enabling complaint filing and transaction investigation.
 
-## 📁 Project Structure
+Key Features
 
-```
-flowmingo/
-├── app.py               ← Flask backend (all API routes)
-├── flowmingo.db         ← SQLite database (auto-created on first run)
-├── requirements.txt     ← Python dependencies
-├── templates/
-│   └── index.html       ← Frontend (served by Flask)
-└── README.md
-```
+1. Live Transaction Monitoring
+- Real-time simulation of financial transactions
+- Visual monitoring using animated transaction flows
+- Displays transactions per second (TPS)
+- Risk score tracking over time
 
----
+2. Intelligent Alert System
+- Automatically flags high-risk transactions
+- Categorizes alerts based on severity:
+  - 🔴 High Risk
+  - 🟡 Medium Risk
+  - 🟢 Low Risk
+- Displays live alert stream with transaction details
 
-## ⚡ Quick Start
+3. Fraud Typology Detection
+Detects common money laundering patterns:
+- 🐡 Smurfing (multiple small transactions)
+- 🔀 Layering (complex transaction chains)
+- 🔁 Round-Tripping (circular money flow)
+- 📋 Normal transactions (monitored)
 
-### 1. Install Python (if not already installed)
-Download from https://python.org — requires Python 3.9+
+4. Analytics Dashboard
+- Total transactions processed
+- Flagged transactions count
+- Fraud rings detected
+- Transaction volume tracking
+- Typology distribution visualization
 
-### 2. Install Flask
-```bash
-pip install flask
-```
+5. Complaint Filing System
+- Structured form to report suspicious activity
+- Captures:
+  - Account details
+  - Transaction details
+  - Typology classification
+  - Evidence and notes
+- Generates STR/CTR reports (simulated)
 
-### 3. Run the server
-```bash
-cd flowmingo
-python app.py
-```
+6. Transaction Records Management
+- Search and filter transactions
+- View detailed transaction info
+- Export records as CSV
+- Pagination for large datasets
 
-### 4. Open in browser
-```
-http://localhost:5000
-```
+7. Risk Scoring Engine
+- Each transaction is assigned a risk score (0–100)
+- Threshold-based classification:
+  - >85 → Flagged
+  - 55–85 → Review
+  - <55 → Cleared
 
-That's it. The database is created automatically with 50 seed transactions.
+System Architecture
 
----
+The platform follows a modular structure:
 
-## 🗄️ Database (flowmingo.db — SQLite)
+1. Data Simulation Layer
+   - Generates realistic transaction data
+   - Mimics banking systems (RTGS, NEFT, UPI)
 
-Four tables — all data is **persistent across restarts**:
+2. Detection Layer
+   - Assigns risk scores based on typology
+   - Identifies suspicious patterns
 
-| Table | Purpose |
-|-------|---------|
-| `transactions` | All RTGS/NEFT/IMPS transfers, both auto-simulated and manual |
-| `complaints` | Manually filed FIU-IND complaints with full officer details |
-| `alerts` | Auto-generated risk alerts from GNN inference |
-| `audit_log` | Every status change and action for legal evidence trail |
+3. Visualization Layer
+   - Dashboard with real-time updates
+   - Graphs and transaction flows
 
-### View raw data (optional)
-```bash
-sqlite3 flowmingo.db
-sqlite> .tables
-sqlite> SELECT * FROM complaints;
-sqlite> SELECT * FROM transactions WHERE status='flagged';
-sqlite> .quit
-```
+4. User Interaction Layer
+   - Complaint filing interface
+   - Transaction inspection tools
 
----
+Technologies Used
 
-## 🌐 REST API Reference
+- HTML5
+- CSS3 (Custom UI + Animations)
+- Vanilla JavaScript
+- Canvas API (for live monitoring visuals)
 
-All endpoints return JSON. Base URL: `http://localhost:5000`
+Use Cases
 
-### Stats
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/stats` | Dashboard KPIs (total txn, flagged, volume, etc.) |
+- Banking fraud monitoring
+- AML compliance systems
+- Financial intelligence units (FIU)
+- Academic demonstrations of fraud detection systems
 
-### Transactions
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/transactions` | Paginated list. Params: `page`, `per_page`, `q`, `typology`, `status` |
-| GET | `/api/transactions/:ref` | Single transaction detail |
-| PATCH | `/api/transactions/:ref/status` | Update status. Body: `{"status":"flagged"\|"review"\|"cleared"}` |
-| POST | `/api/transactions/simulate` | Generate random transactions. Body: `{"count":3}` |
+Note
 
-### Complaints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/complaints` | Paginated list. Params: `page`, `per_page`, `q`, `status` |
-| POST | `/api/complaints` | File a new complaint (see body below) |
-| GET | `/api/complaints/:ref` | Single complaint detail |
-| PATCH | `/api/complaints/:ref/status` | Update status. Body: `{"status":"open"\|"under_review"\|"closed"}` |
+This is an implementation-based prototype designed for demonstration and educational purposes.  
+It does not connect to real banking systems.
 
-### STR Report
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/str/:complaint_ref` | Generate structured STR/CTR report for a complaint |
+Future Improvements
 
-### Alerts
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/alerts` | Recent alerts. Params: `limit`, `resolved` |
-| PATCH | `/api/alerts/:id/resolve` | Mark alert as resolved |
+- Integration with real transaction APIs
+- Machine learning-based anomaly detection
+- Graph-based fraud detection (GNN models)
+- Role-based authentication system
+- Backend database integration
 
-### Export
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/export/transactions` | Download all transactions as CSV |
-| GET | `/api/export/complaints` | Download all complaints as CSV |
+Authors
 
-### Audit Log
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/audit` | Full audit trail. Param: `limit` |
-
----
-
-## 📝 Filing a Complaint (POST /api/complaints)
-
-```json
-{
-  "my_acc":       "ACC12345",
-  "susp_acc":     "ACC67890",
-  "my_bank":      "Union Bank of India",
-  "susp_bank":    "HDFC Bank",
-  "mode":         "RTGS",
-  "amount":       500000,
-  "txn_count":    3,
-  "txn_ref":      "UTR20240409123456",
-  "txn_date":     "2024-04-09",
-  "txn_time":     "14:30:00",
-  "typology":     "smurfing",
-  "description":  "Multiple sub-threshold transfers observed...",
-  "officer_name": "Rahul Sharma",
-  "officer_id":   "UBI/AML/001",
-  "priority":     "high"
-}
-```
-
-**Typology values:** `smurfing` | `round-tripping` | `layering` | `normal` | `dormant`  
-**Priority values:** `low` | `medium` | `high` | `critical`
-
-**Response:**
-```json
-{
-  "success": true,
-  "ref": "COMPLAINT-20240409-A1B2C3",
-  "str_ref": "STR/2024/83721",
-  "risk_score": 92
-}
-```
-
----
-
-## ⚖️ Legal / Jury Evidence Use
-
-The platform is designed so every action is traceable:
-
-1. **Complaints table** — stores officer name, officer ID, timestamp, STR reference, full description
-2. **Audit log** — every flag/clear/status-change is logged with timestamp
-3. **STR Reports** — generated via `GET /api/str/:ref`, include all PMLA-required fields
-4. **CSV Export** — download complete transaction or complaint history for court submission
-5. **Database file** — `flowmingo.db` is a standard SQLite file, openable in any DB browser for independent verification
-
-### To present to a jury:
-- Run the server, open http://localhost:5000 on a projector
-- Navigate to **RECORDS → COMPLAINTS** tab to show all filed complaints
-- Click any complaint → **GENERATE STR** to show the FIU-IND report
-- Use **⬇ EXPORT CSV** to produce court-admissible spreadsheet records
-- The `audit_log` table provides a tamper-evident action trail
-
----
-
-## 🔧 Configuration
-
-Edit the top of `app.py` to change:
-- `DB_PATH` — where the SQLite file is stored
-- Port — change `port=5000` in the last line
-- Seed count — change `range(50)` in `_seed()` for more initial data
-
----
-
-## 📦 Dependencies
-
-- Python 3.9+
-- Flask (only external dependency)
-- SQLite3 (built into Python — no install needed)
+-Harshith Nair
+-Rishi Savla
+Developed as part of a cybersecurity/AI research project.
